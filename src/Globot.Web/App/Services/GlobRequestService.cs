@@ -26,4 +26,11 @@ public class GlobRequestService
     {
         return _items;
     }
+
+    public async Task<PushGlobRequestContext> GetNext(CancellationToken cancelToken)
+    {
+        var item = await _queue.Reader.ReadAsync(cancelToken);
+
+        return item;
+    }
 }

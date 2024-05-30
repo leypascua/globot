@@ -2,13 +2,13 @@
 
 public record PushGlobRequest
 {
-    public PushGlobRequest(string input, DateTimeOffset? requestDate = null)
+    public PushGlobRequest(string input, DateTimeOffset? requestDate = null) 
     {
         KnownSources = [input];
         RequestDateUtc = requestDate.GetValueOrDefault(DateTimeOffset.UtcNow);
     }
 
-    public PushGlobRequest(params string[] inputs)
+    public PushGlobRequest(params string[] inputs) 
     {
         KnownSources = inputs;
         RequestDateUtc = DateTimeOffset.UtcNow;
@@ -20,6 +20,8 @@ public record PushGlobRequest
 
 public class PushGlobRequestContext(PushGlobRequest request)
 {
+    public Guid Id { get; private set; } = Guid.NewGuid();
+    
     public PushGlobRequest Request { get; set; } = request;
 
     public PushGlobRequestStatus Status { get; set; }
