@@ -29,6 +29,7 @@ public class GlobotConfiguration
     public class BlobServiceClientConfiguration
     {
         public string? ConnectionString { get; set; }
+        public string? ContainerName { get; set; }
     }
 
     public class AzureConfiguration 
