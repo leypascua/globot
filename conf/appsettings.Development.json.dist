@@ -1,0 +1,24 @@
+{
+  "Globot" : {
+    "AppRoot": "Globot",
+    "ApiKey": "super-secret-api-key",
+
+    "FileExtensions": ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.js", "*.txt", "*.pdf", ".ttf", ".otf", ".woff", ".woff2", ".eot", ".svg", "*.html", "*.htm"],
+
+    "GlobDumpPath": "/path/to/globdump",
+
+    "Azure": {
+      "BlobServiceClient": {
+        "ConnectionString": "DefaultEndpointsProtocol=https;AccountName=azure-storage-account-name;AccountKey=super-secret-account-key;EndpointSuffix=core.windows.net",
+        "ContainerName": "container-name"
+      }
+    },
+
+    "KnownSources": {
+      "WebAppAssets" : {
+        "Path": "/path/to/iisapp",
+        "FileExtensions" : ["*.*"]
+      }
+    }
+  }
+}
