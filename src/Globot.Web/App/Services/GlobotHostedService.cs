@@ -106,16 +106,19 @@ public class GlobotHostedService : BackgroundService
         foreach (var file in globs.Files)
         {
             var sourceFileName = Path.Combine(sourceDir.FullName, file.Path);
-            var destFileName = Path.Combine(globPath, knownSourceName, file.Path);
+            
+            string destBlobName = file.Path.ToLowerInvariant();
+            string blobPath = Path.Combine(knownSourceName, destBlobName);
+
+            await UploadBlob(sourceFileName, blobPath, container, cancellationToken);
+
+            var destFileName = Path.Combine(globPath, knownSourceName, destBlobName);
             var destFile = new FileInfo(destFileName);
             if (!destFile.Directory!.Exists)
             {
                 destFile.Directory.Create();
             }
-
-            string blobPath = Path.Combine(knownSourceName, file.Path);
-            await UploadBlob(sourceFileName, blobPath, container, cancellationToken);
-
+            
             File.Copy(sourceFileName, destFileName);
         }
 
