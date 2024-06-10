@@ -1,4 +1,6 @@
 ﻿
+using System.Text.Json;
+
 namespace Globot.Web;
 
 public class GlobotFileManifest
@@ -8,14 +10,31 @@ public class GlobotFileManifest
     public string[]? FileExtensions {get;set;}
     public Dictionary<string, Entry> Entries {get;set;} = new Dictionary<string, Entry>();
 
-    public static GlobotFileManifest CreateFrom(FileInfo fileInfo)
+    public static async Task<GlobotFileManifest> CreateFrom(FileInfo fileInfo)
     {
         if (!fileInfo.Exists)
         {
             return new GlobotFileManifest();
         }
 
-        throw new NotImplementedException("Creating from manifest.json file not supported at this time.");
+        using (var fs = fileInfo.OpenRead())
+        {
+            return await CreateFrom(fs);
+        }
+    }
+
+    public static async Task<GlobotFileManifest> CreateFrom(Stream stream)
+    {
+        using (var reader = new StreamReader(stream))
+        {
+            string json = await reader.ReadToEndAsync();
+            return CreateFrom(json);
+        }
+    }
+
+    public static GlobotFileManifest CreateFrom(string json)
+    {
+        return JsonSerializer.Deserialize<GlobotFileManifest>(json)!;
     }
 
     public bool TryAdd(string sourcePath, string destPath, string contentType)

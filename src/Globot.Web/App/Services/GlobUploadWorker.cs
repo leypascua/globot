@@ -42,7 +42,7 @@ public class GlobUploadWorker
 
         var container = GetBlobContainer();
         var manifestFile = GetManifestFile(_knownSourceName);
-        var manifest = GlobotFileManifest.CreateFrom(manifestFile);
+        var manifest = await GlobotFileManifest.CreateFrom(manifestFile);
 
         foreach (var file in globs.Files)
         {
@@ -52,7 +52,11 @@ public class GlobUploadWorker
             string blobPath = Path.Combine(_knownSourceName, destBlobName);
             string mimeType = MimeTypes.GetMimeType(sourceFileName);
 
-            bool isUploadRequired = manifest.TryAdd(file.Path, blobPath, mimeType);
+            bool isUploadRequired = manifest.TryAdd(
+                sourcePath: file.Path, 
+                destPath: blobPath, 
+                contentType: mimeType
+            );
 
             if (isUploadRequired)
             {
