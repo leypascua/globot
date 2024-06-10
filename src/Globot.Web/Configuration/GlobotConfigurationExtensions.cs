@@ -38,6 +38,6 @@ public static class GlobotConfigurationExtensions
 
         var log = logFactory.CreateLogger($"{typeof(GlobUploadWorker).FullName}.{knownSourceName}");
 
-        return (new GlobUploadWorker(globot, log, knownSource), null);
+        return (new GlobUploadWorker(globot, log, knownSourceName), null);
     }
 }
