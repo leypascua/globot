@@ -42,7 +42,9 @@ public class GlobotHostedService : BackgroundService
 
         foreach (var worker in workers) 
         {
-            tasks.Add(ExecuteWorker(worker, cancellationToken));
+            tasks.Add(
+                ExecuteWorker(worker, cancellationToken)
+            );
         }
 
         await Task

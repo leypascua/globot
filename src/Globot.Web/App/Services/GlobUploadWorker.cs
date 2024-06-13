@@ -46,6 +46,8 @@ public class GlobUploadWorker
         var manifestFile = GetManifestFile(_knownSourceName);
         var manifest = await GlobotFileManifest.CreateFrom(manifestFile);
 
+        _log.LogInformation("  > Starting blob uploads for known source: " + _knownSourceName);
+
         foreach (var file in globs.Files)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -54,10 +56,11 @@ public class GlobUploadWorker
             }
             
             var sourceFileName = Path.Combine(sourceDir.FullName, file.Path);
-            
-            string destBlobName = file.Path.ToLowerInvariant();
-            string blobPath = Path.Combine(_knownSourceName, destBlobName);
             string mimeType = MimeTypes.GetMimeType(sourceFileName);
+            string destBlobName = file.Path.ToLowerInvariant();
+            string blobPath = Path
+                .Combine(_knownSourceName, destBlobName)
+                .Replace("\\", "/");
 
             bool isUploadRequired = manifest.TryAdd(
                 sourcePath: file.Path, 
@@ -69,22 +72,28 @@ public class GlobUploadWorker
             {
                 if (!cancellationToken.IsCancellationRequested)
                 {
-                    await UploadBlob(sourceFileName, blobPath, mimeType, container, cancellationToken);
+                    //await UploadBlob(sourceFileName, blobPath, mimeType, container, cancellationToken);
                 }
             }
         }
+        
+        if (manifest.HasChanged())
+        {
+            await SaveManifestFile(manifest, manifestFile);
+        }
 
-        await SaveManifestFile(manifest, manifestFile);
+        _log.LogInformation("  > Finished blob upload for known source: " + _knownSourceName);
     }
 
     private async Task SaveManifestFile(GlobotFileManifest manifest, FileInfo manifestFile)
     {
+        string manifestFileName = manifestFile.FullName;
         if (manifestFile.Exists)
         {
             Rename(manifestFile);
         }
 
-        var newManifestFile = new FileInfo(manifestFile.FullName);
+        var newManifestFile = new FileInfo(manifestFileName);
 
         if (!manifestFile.Directory!.Exists)
         {
@@ -95,6 +104,8 @@ public class GlobUploadWorker
         {
             string json = JsonSerializer.Serialize(manifest);
             await fs.WriteAsync(json);
+            string knownSourceName = _knownSourceName;
+            _log.LogInformation("  > [{knownSourceName}] Manifest file saved at [{FullName}]", knownSourceName, manifestFile.FullName);
         }
     }
 
@@ -123,9 +134,9 @@ public class GlobUploadWorker
             return file;
         }
 
-        if (!Directory.Exists(Path.GetDirectoryName(file.FullName)))
+        if (!file.Directory!.Exists)
         {
-            Directory.CreateDirectory(file.FullName);
+            file.Directory.Create();
         }
 
         return file;

@@ -5,6 +5,7 @@ namespace Globot.Web;
 
 public class GlobotFileManifest
 {
+    private bool _hasChanged = false;
     public string? ContainerName {get;set;}
     public string? SourcePath {get;set;}
     public string[]? FileExtensions {get;set;}
@@ -46,7 +47,14 @@ public class GlobotFileManifest
             ContentType = contentType
         });
 
+        _hasChanged = true;
+
         return true;
+    }
+
+    public bool HasChanged()
+    {
+        return _hasChanged;
     }
 
     public class Entry
