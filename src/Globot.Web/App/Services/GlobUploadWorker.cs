@@ -13,6 +13,8 @@ public class GlobUploadWorker
     private readonly ILogger _log;
     private readonly string _knownSourceName;
 
+    public string KnownSourceName => _knownSourceName;
+
     public GlobUploadWorker(GlobotConfiguration globot, ILogger log, string knownSourceName)
     {
         _globot = globot;
@@ -46,6 +48,11 @@ public class GlobUploadWorker
 
         foreach (var file in globs.Files)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+            
             var sourceFileName = Path.Combine(sourceDir.FullName, file.Path);
             
             string destBlobName = file.Path.ToLowerInvariant();
@@ -60,7 +67,10 @@ public class GlobUploadWorker
 
             if (isUploadRequired)
             {
-                await UploadBlob(sourceFileName, blobPath, mimeType, container, cancellationToken);
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    await UploadBlob(sourceFileName, blobPath, mimeType, container, cancellationToken);
+                }
             }
         }
 

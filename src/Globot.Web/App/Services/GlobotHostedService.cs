@@ -1,10 +1,6 @@
-﻿using System.Net;
-using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
+﻿using System.ComponentModel;
 using Globot.Web.App.Services;
 using Globot.Web.Configuration;
-using Microsoft.Extensions.FileSystemGlobbing;
-using Microsoft.Extensions.FileSystemGlobbing.Abstractions;
 
 namespace Globot.Web;
 
@@ -12,6 +8,7 @@ public class GlobotHostedService : BackgroundService
 {
     private readonly IConfiguration _configuration;
     private readonly GlobRequestService _globRequests;
+    private readonly ILoggerFactory _logFactory;
     private readonly ILogger<GlobotHostedService> _log;
     private readonly GlobotConfiguration _globot;
 
@@ -20,6 +17,7 @@ public class GlobotHostedService : BackgroundService
         _configuration = configuration;
         _globot = configuration.GlobotConfiguration();
         _globRequests = globRequestService;
+        _logFactory = logFactory;
         _log = logFactory.CreateLogger<GlobotHostedService>();
     }
 
@@ -27,132 +25,51 @@ public class GlobotHostedService : BackgroundService
     {
         _log.LogInformation("GlobotHostedService is starting up.");
 
+        var workers = InitializeWorkers();
+
         while (!stoppingToken.IsCancellationRequested)
         {
-            await DoWork(stoppingToken);
+            await DoWork(workers, stoppingToken);
+            await Task.Delay(TimeSpan.FromSeconds(30));
         }
 
         _log.LogInformation("GlobotHostedService is shutting down.");
     }
 
-    private async Task DoWork(CancellationToken cancellationToken)
+    private async Task DoWork(IEnumerable<GlobUploadWorker> workers, CancellationToken cancellationToken)
     {
-        var requestContext = await _globRequests.GetNext(cancellationToken);
+        var tasks = new List<Task>();
 
-        if (requestContext == null) return;
-        
-        string globDirName = $"{DateTime.UtcNow.ToString("yyyyMMddTHHmmss")}.{requestContext.Id}";
-        string globPath = Path.Combine(_globot.GlobDumpPath ?? Path.Combine(Environment.CurrentDirectory, "output"), globDirName);
-        if (!Directory.Exists(globPath))
+        foreach (var worker in workers) 
         {
-            Directory.CreateDirectory(globPath);
+            tasks.Add(ExecuteWorker(worker, cancellationToken));
         }
 
-        requestContext.Status = PushGlobRequestContext.PushGlobRequestStatus.Running;
-        bool errorOccurred = false;
-
-        foreach (string knownSourceName in requestContext.Request.KnownSources)
-        {
-            if (!_globot.KnownSources.ContainsKey(knownSourceName)) 
-            {
-                _log.LogWarning("The requested source '{knownSourceName}' is undefined in configuration.", knownSourceName);
-                continue;
-            }
-            
-            var knownSource = _globot.KnownSources[knownSourceName];
-
-            if (!Directory.Exists(knownSource.Path))
-            {
-                _log.LogWarning("The path '{Path}' defined for source '{knownSourceName}' does not exist", knownSource.Path, knownSourceName);
-                return;
-            }
-
-            _log.LogInformation("Performing glob work for request [{Id}] on known source [{knownSourceName}]", requestContext.Id, knownSourceName);
-
-            try
-            {
-                DoGlob(knownSourceName, knownSource, globPath, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _log.LogCritical("Error occurred. Reason: {Message}", ex.Message);
-                errorOccurred = true;
-            }
-        }
-
-        requestContext.Status = errorOccurred ? PushGlobRequestContext.PushGlobRequestStatus.FinishedWithErrors : PushGlobRequestContext.PushGlobRequestStatus.Finished;
+        await Task
+            .WhenAll(tasks.ToArray())
+            .WaitAsync(cancellationToken);
     }
 
-    private async void DoGlob(string knownSourceName, GlobotConfiguration.KnownSourceConfiguration knownSource, string globPath, CancellationToken cancellationToken)
+    private async Task ExecuteWorker(GlobUploadWorker worker, CancellationToken cancellationToken)
     {
-        var matcher = new Matcher();
-        var includedPatterns = knownSource.FileExtensions
-            .Select(fe => $"**/{fe}")
-            .ToArray();
-
-        matcher.AddIncludePatterns(includedPatterns);
-        
-        var sourceDir = new DirectoryInfo(knownSource.Path!);
-        var globs = matcher.Execute(new DirectoryInfoWrapper(sourceDir));
-
-        if (!globs.HasMatches)
+        try 
         {
-            _log.LogInformation("No files found in path '{Path}'", knownSource.Path);
-            return;
+            _log.LogDebug("ExecuteWorker: Running for known source: [{KnownSourceName}]", worker.KnownSourceName);
+            await worker.UploadGlobs(cancellationToken);
+            _log.LogDebug("ExecuteWorker: Completed for known source: [{KnownSourceName}]", worker.KnownSourceName);            
         }
-
-        var container = GetBlobContainer();
-
-        foreach (var file in globs.Files)
+        catch (Exception ex)
         {
-            var sourceFileName = Path.Combine(sourceDir.FullName, file.Path);
-            
-            string destBlobName = file.Path.ToLowerInvariant();
-            string blobPath = Path.Combine(knownSourceName, destBlobName);
-
-            await UploadBlob(sourceFileName, blobPath, container, cancellationToken);
-
-            var destFileName = Path.Combine(globPath, knownSourceName, destBlobName);
-            var destFile = new FileInfo(destFileName);
-            if (!destFile.Directory!.Exists)
-            {
-                destFile.Directory.Create();
-            }
-            
-            File.Copy(sourceFileName, destFileName);
+            _log.LogError("ExecuteWorker failed on worker [{KnownSourceName}]. Reason: {Message}", worker.KnownSourceName, ex.Message);
         }
-
-        _log.LogInformation("Done copying globbed files from '{path}' to {destination}.", knownSource.Path, globPath);
     }
 
-    private async Task UploadBlob(string sourceFileName, string blobPath, BlobContainerClient container, CancellationToken cancellationToken)
+    private IEnumerable<GlobUploadWorker> InitializeWorkers()
     {
-        string mimeType = MimeTypes.GetMimeType(sourceFileName);
-        var blob = container.GetBlobClient(blobPath);
-        var opts = new BlobUploadOptions 
+        foreach (string knownSourceName in _globot.KnownSources.Keys)
         {
-            Conditions = null,
-            HttpHeaders = new BlobHttpHeaders 
-            {
-                ContentType = mimeType
-            }
-        };
-        
-        await blob.UploadAsync(
-            sourceFileName,
-            opts,
-            cancellationToken
-        );
-
-        _log.LogInformation("  > Blob uploaded to '{blobPath}' on container [{Name}].", blobPath, container.Name);
-    }
-
-    private BlobContainerClient GetBlobContainer()
-    {
-        var clientConf = _globot.Azure.BlobServiceClient!;
-
-        var storageContainer = new BlobContainerClient(clientConf.ConnectionString, clientConf.ContainerName);
-
-        return storageContainer;
+            var logger = _logFactory.CreateLogger($"Globot.Web.App.Services.GlobUploadWorker[\"{knownSourceName}\"]");
+            yield return new GlobUploadWorker(_globot, logger, knownSourceName);
+        }
     }
 }
