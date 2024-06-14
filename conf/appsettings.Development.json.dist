@@ -5,7 +5,7 @@
 
     "FileExtensions": ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.js", "*.txt", "*.pdf", ".ttf", ".otf", ".woff", ".woff2", ".eot", ".svg", "*.html", "*.htm"],
 
-    "GlobDumpPath": "/path/to/globdump",
+    "GlobManifestPath": "/path/to/glob/manifests",
 
     "Azure": {
       "BlobServiceClient": {

@@ -8,13 +8,17 @@ public class GlobotConfiguration
     {
         Azure = new AzureConfiguration();
         KnownSources = new Dictionary<string, KnownSourceConfiguration>();
-        GlobDumpPath = Path.Combine(Environment.CurrentDirectory, "GlobDump");
+        GlobManifestPath =  Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory,
+            "output",
+            "GlobUploadWorker"
+        );
     }
 
     public string? AppRoot { get; set; }
     public string? ApiKey { get; set; }
     public string[] FileExtensions { get; set; } = DEFAULT_FILE_EXTENSIONS;
-    public string? GlobDumpPath { get; set; }
+    public string? GlobManifestPath { get; set; }
 
     public AzureConfiguration Azure { get; set; }
 

@@ -72,7 +72,7 @@ public class GlobUploadWorker
             {
                 if (!cancellationToken.IsCancellationRequested)
                 {
-                    //await UploadBlob(sourceFileName, blobPath, mimeType, container, cancellationToken);
+                    await UploadBlob(sourceFileName, blobPath, mimeType, container, cancellationToken);
                 }
             }
         }
@@ -142,23 +142,20 @@ public class GlobUploadWorker
         return file;
     }
 
-    private static string ResolveManifestDirectory()
+    private string ResolveManifestDirectory()
     {
-        bool useLocalFile = false;
-
-#if DEBUG
-        if (EnvironmentContext.Current.IsDevelopment())
-        {
-            useLocalFile = true;
-        }
-#endif
-
-        return useLocalFile ? 
+        string manifestPath = string.IsNullOrEmpty(_globot.GlobManifestPath) ?
             Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory,
                 "output",
                 "GlobUploadWorker"
             ) :
+            Path.IsPathRooted(_globot.GlobManifestPath) ?
+                _globot.GlobManifestPath :
+                Path.Combine(Environment.CurrentDirectory, "output", "GlobUploadWorker");
+
+        return Directory.Exists(manifestPath) ? 
+            manifestPath : 
             Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                     ".globot",
