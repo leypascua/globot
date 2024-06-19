@@ -1,4 +1,6 @@
 ﻿
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace Globot.Web;
@@ -38,18 +40,60 @@ public class GlobotFileManifest
         return JsonSerializer.Deserialize<GlobotFileManifest>(json)!;
     }
 
-    public bool TryAdd(string sourcePath, string destPath, string contentType)
+    public bool TryAdd(string sourceFilePath, string destPath, string contentType)
     {
-        if (this.Entries.ContainsKey(sourcePath)) return false;
+        bool isNewKey = !this.Entries.ContainsKey(sourceFilePath);
 
-        this.Entries.Add(sourcePath, new Entry {
-            Path = destPath,
-            ContentType = contentType
-        });
+        if (isNewKey)
+        {
+            this.Entries.Add(sourceFilePath, new Entry 
+            {
+                Path = destPath,
+                ContentType = contentType, 
+                Md5Hash = ComputeFileHash(sourceFilePath)
+            });
+        }
 
-        _hasChanged = true;
+        var entry = this.Entries[sourceFilePath];
+        
+        string sourceFileHash = isNewKey ? 
+            entry.Md5Hash! :
+            ComputeFileHash(sourceFilePath);
 
-        return true;
+        if (isNewKey || !sourceFileHash.Equals(entry.Md5Hash))
+        {
+            entry.Md5Hash = sourceFileHash;
+            _hasChanged = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static string ComputeFileHash(string filePath)
+    {
+        using (var fileStream = File.OpenRead(filePath))
+        using (MD5 md5 = MD5.Create())
+        {
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = fileStream.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                md5.TransformBlock(buffer, 0, bytesRead, buffer, 0);
+            }
+
+            md5.TransformFinalBlock(buffer, 0, 0);
+
+            byte[] hashBytes = md5.Hash!;
+            var hashStringBuilder = new StringBuilder();
+            
+            foreach (byte b in hashBytes)
+            {
+                hashStringBuilder.Append(b.ToString("x2"));
+            }
+            
+            return hashStringBuilder.ToString();
+        }
     }
 
     public bool HasChanged()
@@ -60,6 +104,7 @@ public class GlobotFileManifest
     public class Entry
     {
         public string? Path {get;set;}
-        public string? ContentType {get;set;} 
+        public string? ContentType {get;set;}
+        public string? Md5Hash { get; set; }
     }
 }

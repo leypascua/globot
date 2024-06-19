@@ -56,14 +56,22 @@ public class GlobUploadWorker
             }
             
             var sourceFileName = Path.Combine(sourceDir.FullName, file.Path);
+            var sourceFileInfo = new FileInfo(sourceFileName);
+
+            // skip uploading empty files
+            if (!sourceFileInfo.Exists || sourceFileInfo.Length == 0)
+            {
+                continue;
+            }
+            
             string mimeType = MimeTypes.GetMimeType(sourceFileName);
             string destBlobName = file.Path.ToLowerInvariant();
             string blobPath = Path
                 .Combine(_knownSourceName, destBlobName)
                 .Replace("\\", "/");
-
+            
             bool isUploadRequired = manifest.TryAdd(
-                sourcePath: file.Path, 
+                sourceFilePath: sourceFileName, 
                 destPath: blobPath, 
                 contentType: mimeType
             );
