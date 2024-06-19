@@ -81,7 +81,7 @@ public class GlobUploadWorker
         {
             await SaveManifestFile(manifest, manifestFile);
         }
-
+        
         _log.LogInformation("  > Finished blob upload for known source: " + _knownSourceName);
     }
 

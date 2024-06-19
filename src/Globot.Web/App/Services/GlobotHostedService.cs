@@ -30,7 +30,7 @@ public class GlobotHostedService : BackgroundService
         while (!stoppingToken.IsCancellationRequested)
         {
             await DoWork(workers, stoppingToken);
-            await Task.Delay(TimeSpan.FromSeconds(30));
+            await Task.Delay(TimeSpan.FromSeconds(15));
         }
 
         _log.LogInformation("GlobotHostedService is shutting down.");
@@ -50,6 +50,11 @@ public class GlobotHostedService : BackgroundService
         await Task
             .WhenAll(tasks.ToArray())
             .WaitAsync(cancellationToken);
+
+        tasks.ForEach(t => t.Dispose());
+
+        tasks.Clear();
+        tasks = null;
     }
 
     private async Task ExecuteWorker(GlobUploadWorker worker, CancellationToken cancellationToken)
