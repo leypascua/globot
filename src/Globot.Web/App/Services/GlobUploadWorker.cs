@@ -38,7 +38,7 @@ public class GlobUploadWorker
 
         if (!globs.HasMatches)
         {
-            _log.LogInformation("No files found in path '{Path}'", knownSource.Path);
+            _log.LogWarning("No files found in path '{Path}'", knownSource.Path);
             return;
         }
 
@@ -46,7 +46,7 @@ public class GlobUploadWorker
         var manifestFile = GetManifestFile(_knownSourceName);
         var manifest = await GlobotFileManifest.CreateFrom(manifestFile);
 
-        _log.LogInformation("  > Starting blob uploads for known source: " + _knownSourceName);
+        _log.LogDebug("  > Starting blob uploads for known source: " + _knownSourceName);
 
         foreach (var file in globs.Files)
         {
@@ -80,7 +80,10 @@ public class GlobUploadWorker
             {
                 if (!cancellationToken.IsCancellationRequested)
                 {
+                    string knownSourceName = _knownSourceName;
+                    _log.LogInformation("  > Uploading blob: [{blobPath}] from known source [{knownSourceName}] to container [{container}]", blobPath, knownSourceName, container);
                     await UploadBlob(sourceFileName, blobPath, mimeType, container, cancellationToken);
+                    _log.LogDebug("    >> Upload completed: [{blobPath}] from known source [{knownSourceName}] to container [{container}]", blobPath, knownSourceName, container);
                 }
             }
         }
@@ -90,7 +93,7 @@ public class GlobUploadWorker
             await SaveManifestFile(manifest, manifestFile);
         }
         
-        _log.LogInformation("  > Finished blob upload for known source: " + _knownSourceName);
+        _log.LogDebug("  > Finished blob upload for known source: " + _knownSourceName);
     }
 
     private async Task SaveManifestFile(GlobotFileManifest manifest, FileInfo manifestFile)
@@ -188,8 +191,6 @@ public class GlobUploadWorker
             opts,
             cancellationToken
         );
-
-        _log.LogInformation("  > Blob uploaded to '{blobPath}' on container [{Name}].", blobPath, container.Name);
     }
 
     private BlobContainerClient GetBlobContainer()

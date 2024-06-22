@@ -27,6 +27,8 @@ public class GlobotHostedService : BackgroundService
 
         var workers = InitializeWorkers();
 
+        await Task.Delay(TimeSpan.FromSeconds(5));
+
         while (!stoppingToken.IsCancellationRequested)
         {
             await DoWork(workers, stoppingToken);

@@ -42,9 +42,9 @@ public class GlobotFileManifest
 
     public bool TryAdd(string sourceFilePath, string destPath, string contentType)
     {
-        bool isNewKey = !this.Entries.ContainsKey(sourceFilePath);
+        bool isNewFile = !this.Entries.ContainsKey(sourceFilePath);
 
-        if (isNewKey)
+        if (isNewFile)
         {
             this.Entries.Add(sourceFilePath, new Entry 
             {
@@ -56,11 +56,11 @@ public class GlobotFileManifest
 
         var entry = this.Entries[sourceFilePath];
         
-        string sourceFileHash = isNewKey ? 
+        string sourceFileHash = isNewFile ? 
             entry.Md5Hash! :
             ComputeFileHash(sourceFilePath);
 
-        if (isNewKey || !sourceFileHash.Equals(entry.Md5Hash))
+        if (isNewFile || !sourceFileHash.Equals(entry.Md5Hash))
         {
             entry.Md5Hash = sourceFileHash;
             _hasChanged = true;
