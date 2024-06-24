@@ -2,7 +2,7 @@
 
 public class GlobotConfiguration
 {
-    readonly static string[] DEFAULT_FILE_EXTENSIONS = ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.js", "*.txt", "*.pdf", ".ttf", ".otf", ".woff", ".woff2", ".eot", ".svg", "*.html", "*.htm"];
+    public readonly static string[] DEFAULT_FILE_EXTENSIONS = ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.js", "*.txt", "*.pdf", ".ttf", ".otf", ".woff", ".woff2", ".eot", ".svg", "*.html", "*.htm"];
 
     public GlobotConfiguration()
     {
@@ -27,7 +27,7 @@ public class GlobotConfiguration
     public class KnownSourceConfiguration
     {
         public string? Path {get;set;}
-        public string[] FileExtensions { get; set; } =  DEFAULT_FILE_EXTENSIONS;
+        public string[]? FileExtensions { get; set; }
     }
 
     public class BlobServiceClientConfiguration

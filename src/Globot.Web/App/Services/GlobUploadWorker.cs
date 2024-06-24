@@ -27,7 +27,13 @@ public class GlobUploadWorker
         var knownSource = _globot.KnownSources[_knownSourceName];
 
         var matcher = new Matcher();
-        var includedPatterns = knownSource.FileExtensions
+        var includedPatterns = (knownSource.FileExtensions ?? GlobotConfiguration.DEFAULT_FILE_EXTENSIONS)
+            .Select(fe => {
+               string trimmed = (fe ?? string.Empty).Trim();
+               return trimmed.StartsWith("*") ?
+                trimmed :
+                $"*{trimmed}";
+            })
             .Select(fe => $"**/{fe}")
             .ToArray();
 
