@@ -7,24 +7,20 @@ using System.Text.Json;
 
 namespace Globot.Web.App.Services;
 
-public class GlobUploadWorker
+public class GlobotUploadWorker
 {
     private readonly GlobotConfiguration _globot;
-    private readonly ILogger _log;
-    private readonly string _knownSourceName;
+    private readonly ILogger<GlobotUploadWorker> _log;
 
-    public string KnownSourceName => _knownSourceName;
-
-    public GlobUploadWorker(GlobotConfiguration globot, ILogger log, string knownSourceName)
+    public GlobotUploadWorker(GlobotConfiguration globot, ILogger<GlobotUploadWorker> log)
     {
         _globot = globot;
         _log = log;
-        _knownSourceName = knownSourceName;
     }
 
-    public async Task UploadGlobs(CancellationToken cancellationToken)
+    public async Task UploadGlobs(string knownSourceName, CancellationToken cancellationToken)
     {
-        var knownSource = _globot.KnownSources[_knownSourceName];
+        var knownSource = _globot.KnownSources[knownSourceName];
 
         var matcher = new Matcher();
         var includedPatterns = (knownSource.FileExtensions ?? GlobotConfiguration.DEFAULT_FILE_EXTENSIONS)
@@ -48,11 +44,11 @@ public class GlobUploadWorker
             return;
         }
 
-        var container = GetBlobContainer();
-        var manifestFile = GetManifestFile(_knownSourceName);
+        var container = GetBlobContainer(_globot.Azure.BlobServiceClient!);
+        var manifestFile = GetManifestFile(knownSourceName);
         var manifest = await GlobotFileManifest.CreateFrom(manifestFile);
 
-        _log.LogDebug("  > Starting blob uploads for known source: " + _knownSourceName);
+        _log.LogDebug("  > Starting blob uploads for known source: " + knownSourceName);
 
         foreach (var file in globs.Files)
         {
@@ -73,7 +69,7 @@ public class GlobUploadWorker
             string mimeType = MimeTypes.GetMimeType(sourceFileName);
             string destBlobName = file.Path.ToLowerInvariant();
             string blobPath = Path
-                .Combine(_knownSourceName, destBlobName)
+                .Combine(knownSourceName, destBlobName)
                 .Replace("\\", "/");
             
             bool isUploadRequired = manifest.TryAdd(
@@ -86,7 +82,6 @@ public class GlobUploadWorker
             {
                 if (!cancellationToken.IsCancellationRequested)
                 {
-                    string knownSourceName = _knownSourceName;
                     _log.LogInformation("  > Uploading blob: [{blobPath}] from known source [{knownSourceName}] to container [{container}]", blobPath, knownSourceName, container);
                     await UploadBlob(sourceFileName, blobPath, mimeType, container, cancellationToken);
                     _log.LogDebug("    >> Upload completed: [{blobPath}] from known source [{knownSourceName}] to container [{container}]", blobPath, knownSourceName, container);
@@ -96,13 +91,13 @@ public class GlobUploadWorker
         
         if (manifest.HasChanged())
         {
-            await SaveManifestFile(manifest, manifestFile);
+            await SaveManifestFile(knownSourceName, manifest, manifestFile);
         }
         
-        _log.LogDebug("  > Finished blob upload for known source: " + _knownSourceName);
+        _log.LogDebug("  > Finished blob upload for known source: " + knownSourceName);
     }
 
-    private async Task SaveManifestFile(GlobotFileManifest manifest, FileInfo manifestFile)
+    private async Task SaveManifestFile(string knownSourceName, GlobotFileManifest manifest, FileInfo manifestFile)
     {
         string manifestFileName = manifestFile.FullName;
         if (manifestFile.Exists)
@@ -121,7 +116,6 @@ public class GlobUploadWorker
         {
             string json = JsonSerializer.Serialize(manifest);
             await fs.WriteAsync(json);
-            string knownSourceName = _knownSourceName;
             _log.LogInformation("  > [{knownSourceName}] Manifest file saved at [{FullName}]", knownSourceName, manifestFile.FullName);
         }
     }
@@ -199,12 +193,9 @@ public class GlobUploadWorker
         );
     }
 
-    private BlobContainerClient GetBlobContainer()
+    private static BlobContainerClient GetBlobContainer(GlobotConfiguration.BlobServiceClientConfiguration clientConf)
     {
-        var clientConf = _globot.Azure.BlobServiceClient!;
-
         var storageContainer = new BlobContainerClient(clientConf.ConnectionString, clientConf.ContainerName);
-
         return storageContainer;
     }
 }

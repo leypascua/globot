@@ -7,22 +7,30 @@ namespace Globot.Web.App.Routes;
 
 public static class Requests
 {
-    public static ApiResult Get([FromServices]GlobRequestService globRequests)
+    public static ApiResult Get([FromServices]GlobRequestQueue globRequests)
     {
         var results = globRequests.GetAll();
         return ApiResult.Success(results);
     }
 
-    public static async Task<JsonHttpResult<ApiResult>> Post([FromQuery]string key, [FromQuery]string sources, [FromServices]GlobRequestService globRequests)
+    public static async Task<JsonHttpResult<ApiResult>> Post([FromQuery]string key, [FromQuery]string sources, [FromServices]GlobRequestQueue globRequests)
     {
         var sourceKeys = (sources ?? string.Empty).Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var request = new PushGlobRequest(sourceKeys);
+        
+        var results = new List<PushGlobRequestContext>();
 
-        var requestContext = await globRequests.AddGlobRequest(request);
+        foreach (string sourceKey in sourceKeys)
+        {
+            var request = new PushGlobRequest(sourceKey);
+            var (requestContext, isSuccessful) = await globRequests.Add(request);
 
-        ApiResult result = ApiResult.Success(requestContext);
+            if (isSuccessful)
+            {
+                results.Add(requestContext);
+            }
+        }
+
+        ApiResult result = ApiResult.Success(results);
         return TypedResults.Json(result, statusCode: 201);
-
-       
     }
 }

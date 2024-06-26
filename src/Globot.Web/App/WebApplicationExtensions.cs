@@ -8,9 +8,10 @@ public static class WebApplicationExtensions
 {
     public static IServiceCollection AddGlobot(this IServiceCollection services)
     {
-        services.AddSingleton<GlobRequestService>();
-        services.AddSingleton<GlobotHostedService>();
-        services.AddHostedService<GlobotHostedService>();
+        services.AddSingleton<GlobRequestQueue>();
+        services.AddSingleton<GlobotUploadWorker>();
+        services.AddSingleton<GlobotHostedRequestWorkerService>();
+        services.AddHostedService<GlobotHostedRequestWorkerService>();
 
         services.Configure<JsonOptions>(options => {
             options.SerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
