@@ -29,6 +29,8 @@ public class GlobotHostedRequestWorkerService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await SubmitInitialRequests();
+
         await Task.Delay(TimeSpan.FromSeconds(5));
 
         while (!stoppingToken.IsCancellationRequested)
@@ -37,6 +39,15 @@ public class GlobotHostedRequestWorkerService : BackgroundService
         }
 
         _log.LogWarning("GlobotHostedRequestWorkerService is terminating...");
+    }
+
+    private async Task SubmitInitialRequests()
+    {
+        foreach (string knownSourceName in _globot.KnownSources.Keys)
+        {
+            var request = new PushGlobRequest(knownSourceName);
+            await _requestQueue.Add(request);
+        }
     }
 
     private async Task DoWork(CancellationToken stoppingToken)
