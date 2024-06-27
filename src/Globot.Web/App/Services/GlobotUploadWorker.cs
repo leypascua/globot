@@ -12,9 +12,9 @@ public class GlobotUploadWorker
     private readonly GlobotConfiguration _globot;
     private readonly ILogger<GlobotUploadWorker> _log;
 
-    public GlobotUploadWorker(GlobotConfiguration globot, ILogger<GlobotUploadWorker> log)
+    public GlobotUploadWorker(IConfiguration configuration, ILogger<GlobotUploadWorker> log)
     {
-        _globot = globot;
+        _globot = configuration.GlobotConfiguration();
         _log = log;
     }
 

@@ -46,6 +46,7 @@ public class GlobotHostedRequestWorkerService : BackgroundService
 
         await _semaphore.WaitAsync(stoppingToken);
 
+        _log.LogDebug("  > Starting next queued request for known source [{KnownSource}]", requestContext.Request.KnownSource);
         var task = StartProcessRequestTask(requestContext, stoppingToken);
 
         _runningTasks.Add(task);

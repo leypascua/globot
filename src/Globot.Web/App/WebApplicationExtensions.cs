@@ -1,6 +1,7 @@
 ﻿using Globot.Web.Configuration;
 using Globot.Web.App.Services;
 using Microsoft.AspNetCore.Http.Json;
+using System.Text.Json.Serialization;
 
 namespace Globot.Web.App;
 
@@ -14,7 +15,8 @@ public static class WebApplicationExtensions
         services.AddHostedService<GlobotHostedRequestWorkerService>();
 
         services.Configure<JsonOptions>(options => {
-            options.SerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+            options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
 
         return services;
