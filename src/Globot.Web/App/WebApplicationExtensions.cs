@@ -34,12 +34,8 @@ public static class WebApplicationExtensions
 
         var routes = app.MapGroup($"/{appRoot}");
 
-        routes.MapGet("/Requests", Routes.Requests.Get);
-        
-        if (hostEnv.IsDevelopment())
-        {
-            routes.MapGet("/Requests/Submit", Routes.Requests.Post);
-        }
+        routes.MapGet("/Requests", Routes.Requests.Get);        
+        routes.MapGet("/Requests/Submit", Routes.Requests.Post);
 
         var logFactory = app.Services.GetRequiredService<ILoggerFactory>();
         var log = logFactory.CreateLogger("Globot");
