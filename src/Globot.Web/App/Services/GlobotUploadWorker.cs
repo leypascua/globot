@@ -21,21 +21,8 @@ public class GlobotUploadWorker
     public async Task UploadGlobs(string knownSourceName, CancellationToken cancellationToken)
     {
         var knownSource = _globot.KnownSources[knownSourceName];
-
-        var matcher = new Matcher();
-        var includedPatterns = (knownSource.FileExtensions ?? GlobotConfiguration.DEFAULT_FILE_EXTENSIONS)
-            .Select(fe => {
-               string trimmed = (fe ?? string.Empty).Trim();
-               return trimmed.StartsWith("*") ?
-                trimmed :
-                $"*{trimmed}";
-            })
-            .Select(fe => $"**/{fe}")
-            .ToArray();
-
-        matcher.AddIncludePatterns(includedPatterns);
-        
         var sourceDir = new DirectoryInfo(knownSource.Path!);
+        var matcher = PrepareGlobMatcher(knownSource);
         var globs = matcher.Execute(new DirectoryInfoWrapper(sourceDir));
 
         if (!globs.HasMatches)
@@ -57,36 +44,7 @@ public class GlobotUploadWorker
                 return;
             }
             
-            var sourceFileName = Path.Combine(sourceDir.FullName, file.Path);
-            var sourceFileInfo = new FileInfo(sourceFileName);
-
-            // skip uploading empty files
-            if (!sourceFileInfo.Exists || sourceFileInfo.Length == 0)
-            {
-                continue;
-            }
-            
-            string mimeType = MimeTypes.GetMimeType(sourceFileName);
-            string destBlobName = file.Path.ToLowerInvariant();
-            string blobPath = Path
-                .Combine(knownSourceName, destBlobName)
-                .Replace("\\", "/");
-            
-            bool isUploadRequired = manifest.TryAdd(
-                sourceFilePath: sourceFileName, 
-                destPath: blobPath, 
-                contentType: mimeType
-            );
-
-            if (isUploadRequired)
-            {
-                if (!cancellationToken.IsCancellationRequested)
-                {
-                    _log.LogInformation("  > Uploading blob: [{blobPath}] from known source [{knownSourceName}] to container [{container}]", blobPath, knownSourceName, container);
-                    await UploadBlob(sourceFileName, blobPath, mimeType, container, cancellationToken);
-                    _log.LogDebug("    >> Upload completed: [{blobPath}] from known source [{knownSourceName}] to container [{container}]", blobPath, knownSourceName, container);
-                }
-            }
+            await UploadGlob(knownSourceName, sourceDir, file, manifest, container, cancellationToken);
         }
         
         if (manifest.HasChanged())
@@ -97,12 +55,64 @@ public class GlobotUploadWorker
         _log.LogDebug("  > Finished blob upload for known source: " + knownSourceName);
     }
 
+    private static Matcher PrepareGlobMatcher(GlobotConfiguration.KnownSourceConfiguration knownSource)
+    {
+        var matcher = new Matcher();
+        var includedPatterns = (knownSource.FileExtensions ?? GlobotConfiguration.DEFAULT_FILE_EXTENSIONS)
+            .Select(fe => {
+               string trimmed = (fe ?? string.Empty).Trim();
+               return trimmed.StartsWith("*") ?
+                trimmed :
+                $"*{trimmed}";
+            })
+            .Select(fe => $"**/{fe}")
+            .ToArray();
+
+        matcher.AddIncludePatterns(includedPatterns);
+
+        return matcher;
+    }
+
+    private async Task UploadGlob(string knownSourceName, DirectoryInfo sourceDir, FilePatternMatch file, GlobotFileManifest manifest, BlobContainerClient container, CancellationToken cancellationToken)
+    {
+        var sourceFileName = Path.Combine(sourceDir.FullName, file.Path);
+        var sourceFileInfo = new FileInfo(sourceFileName);
+
+        // skip uploading empty files
+        if (!sourceFileInfo.Exists || sourceFileInfo.Length == 0)
+        {
+            return;
+        }
+        
+        string mimeType = MimeTypes.GetMimeType(sourceFileName);
+        string destBlobName = file.Path.ToLowerInvariant();
+        string blobPath = Path
+            .Combine(knownSourceName, destBlobName)
+            .Replace("\\", "/");
+        
+        bool isUploadRequired = manifest.TryAdd(
+            sourceFilePath: sourceFileName, 
+            destPath: blobPath, 
+            contentType: mimeType
+        );
+
+        if (isUploadRequired)
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                _log.LogInformation("  > Uploading blob: [{blobPath}] from known source [{knownSourceName}] to container [{container}]", blobPath, knownSourceName, container);
+                await UploadBlob(sourceFileName, blobPath, mimeType, container, cancellationToken);
+                _log.LogDebug("    >> Upload completed: [{blobPath}] from known source [{knownSourceName}] to container [{container}]", blobPath, knownSourceName, container);
+            }
+        }
+    }
+
     private async Task SaveManifestFile(string knownSourceName, GlobotFileManifest manifest, FileInfo manifestFile)
     {
         string manifestFileName = manifestFile.FullName;
         if (manifestFile.Exists)
         {
-            Rename(manifestFile);
+            RenameManifestFile(manifestFile);
         }
 
         var newManifestFile = new FileInfo(manifestFileName);
@@ -120,7 +130,7 @@ public class GlobotUploadWorker
         }
     }
 
-    private void Rename(FileInfo manifestFile)
+    private void RenameManifestFile(FileInfo manifestFile)
     {
         string newFileName = $"{Path.GetFileNameWithoutExtension(manifestFile.Name)}.{DateTime.UtcNow.ToString("yyyyMMddTHHmmss")}{manifestFile.Extension}";
         string newFilePath = Path.Combine(

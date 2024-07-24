@@ -96,7 +96,7 @@ public class GlobotHostedRequestWorkerService : BackgroundService
         catch (Exception ex)
         {
             requestContext.Status = PushGlobRequestContext.PushGlobRequestStatus.FinishedWithErrors;
-            _log.LogError("Request worker for known source [{KnownSource}] failed. Reason: {Message}", requestContext.Request.KnownSource, ex.Message);
+            _log.LogError("Request worker for known source [{KnownSource}] failed. Reason: {Message}", requestContext.Request.KnownSource, ex.ToString());
         }
     }
 }
