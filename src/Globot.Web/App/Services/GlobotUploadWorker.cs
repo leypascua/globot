@@ -75,6 +75,9 @@ public class GlobotUploadWorker
 
     private async Task UploadGlob(string knownSourceName, DirectoryInfo sourceDir, FilePatternMatch file, GlobotFileManifest manifest, BlobContainerClient container, CancellationToken cancellationToken)
     {
+        var knownSource = _globot.KnownSources[knownSourceName];
+        var forceLowerCase = knownSource.ForceLowerCase != null && knownSource.ForceLowerCase.Value;
+
         var sourceFileName = Path.Combine(sourceDir.FullName, file.Path);
         var sourceFileInfo = new FileInfo(sourceFileName);
 
@@ -85,7 +88,7 @@ public class GlobotUploadWorker
         }
         
         string mimeType = MimeTypes.GetMimeType(sourceFileName);
-        string destBlobName = file.Path.ToLowerInvariant();
+        string destBlobName = forceLowerCase ? file.Path.ToLowerInvariant() : file.Path;
         string blobPath = Path
             .Combine(knownSourceName, destBlobName)
             .Replace("\\", "/");

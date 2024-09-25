@@ -28,6 +28,7 @@ public class GlobotConfiguration
     {
         public string? Path {get;set;}
         public string[]? FileExtensions { get; set; }
+        public bool? ForceLowerCase { get; set; }
     }
 
     public class BlobServiceClientConfiguration
