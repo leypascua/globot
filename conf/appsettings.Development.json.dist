@@ -17,7 +17,8 @@
     "KnownSources": {
       "WebAppAssets" : {
         "Path": "/path/to/iisapp",
-        "FileExtensions" : ["*.*"]
+        "FileExtensions" : ["*.*"],
+		"ForceLowerCase": false
       }
     }
   }
