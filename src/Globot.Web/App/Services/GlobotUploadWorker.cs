@@ -55,7 +55,7 @@ public class GlobotUploadWorker
         _log.LogDebug("  > Finished blob upload for known source: " + knownSourceName);
     }
 
-    private static Matcher PrepareGlobMatcher(GlobotConfiguration.KnownSourceConfiguration knownSource, string[] fileExtensions)
+    private static Matcher PrepareGlobMatcher(GlobotConfiguration.KnownSourceConfiguration knownSource, string[]? fileExtensions)
     {
         var matcher = new Matcher();
         var includedPatterns = (knownSource.FileExtensions ?? fileExtensions ?? GlobotConfiguration.DEFAULT_FILE_EXTENSIONS)
