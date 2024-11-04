@@ -17,7 +17,7 @@ public class GlobotConfiguration
 
     public string? AppRoot { get; set; }
     public string? ApiKey { get; set; }
-    public string[] FileExtensions { get; set; } = DEFAULT_FILE_EXTENSIONS;
+    public string[]? FileExtensions { get; set; }
     public string? GlobManifestPath { get; set; }
 
     public AzureConfiguration Azure { get; set; }

@@ -22,7 +22,7 @@ public class GlobotUploadWorker
     {
         var knownSource = _globot.KnownSources[knownSourceName];
         var sourceDir = new DirectoryInfo(knownSource.Path!);
-        var matcher = PrepareGlobMatcher(knownSource);
+        var matcher = PrepareGlobMatcher(knownSource, _globot.FileExtensions);
         var globs = matcher.Execute(new DirectoryInfoWrapper(sourceDir));
 
         if (!globs.HasMatches)
@@ -55,10 +55,10 @@ public class GlobotUploadWorker
         _log.LogDebug("  > Finished blob upload for known source: " + knownSourceName);
     }
 
-    private static Matcher PrepareGlobMatcher(GlobotConfiguration.KnownSourceConfiguration knownSource)
+    private static Matcher PrepareGlobMatcher(GlobotConfiguration.KnownSourceConfiguration knownSource, string[] fileExtensions)
     {
         var matcher = new Matcher();
-        var includedPatterns = (knownSource.FileExtensions ?? GlobotConfiguration.DEFAULT_FILE_EXTENSIONS)
+        var includedPatterns = (knownSource.FileExtensions ?? fileExtensions ?? GlobotConfiguration.DEFAULT_FILE_EXTENSIONS)
             .Select(fe => {
                string trimmed = (fe ?? string.Empty).Trim();
                return trimmed.StartsWith("*") ?
@@ -76,8 +76,6 @@ public class GlobotUploadWorker
     private async Task UploadGlob(string knownSourceName, DirectoryInfo sourceDir, FilePatternMatch file, GlobotFileManifest manifest, BlobContainerClient container, CancellationToken cancellationToken)
     {
         var knownSource = _globot.KnownSources[knownSourceName];
-        var forceLowerCase = knownSource.ForceLowerCase != null && knownSource.ForceLowerCase.Value;
-
         var sourceFileName = Path.Combine(sourceDir.FullName, file.Path);
         var sourceFileInfo = new FileInfo(sourceFileName);
 
@@ -88,6 +86,7 @@ public class GlobotUploadWorker
         }
         
         string mimeType = MimeTypes.GetMimeType(sourceFileName);
+        bool forceLowerCase = knownSource.ForceLowerCase.GetValueOrDefault();
         string destBlobName = forceLowerCase ? file.Path.ToLowerInvariant() : file.Path;
         string blobPath = Path
             .Combine(knownSourceName, destBlobName)
@@ -103,7 +102,7 @@ public class GlobotUploadWorker
         {
             if (!cancellationToken.IsCancellationRequested)
             {
-                _log.LogInformation("  > Uploading blob: [{blobPath}] from known source [{knownSourceName}] to container [{container}]", blobPath, knownSourceName, container);
+                _log.LogInformation("  > Uploading blob: [{blobPath}] from known source [{knownSourceName}] to container [{container}] with ForceLowerCase=[{forceLowerCase}]", blobPath, knownSourceName, container, forceLowerCase);
                 await UploadBlob(sourceFileName, blobPath, mimeType, container, cancellationToken);
                 _log.LogDebug("    >> Upload completed: [{blobPath}] from known source [{knownSourceName}] to container [{container}]", blobPath, knownSourceName, container);
             }

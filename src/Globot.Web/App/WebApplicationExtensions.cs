@@ -2,6 +2,7 @@
 using Globot.Web.App.Services;
 using Microsoft.AspNetCore.Http.Json;
 using System.Text.Json.Serialization;
+using Globot.Web.App.Routes;
 
 namespace Globot.Web.App;
 
@@ -32,10 +33,10 @@ public static class WebApplicationExtensions
 
         string appRoot = globot.AppRoot ?? Guid.NewGuid().ToString();
 
-        var routes = app.MapGroup($"/{appRoot}");
-
-        routes.MapGet("/Requests", Routes.Requests.Get);        
-        routes.MapGet("/Requests/Submit", Routes.Requests.Post);
+        // add known routes
+        var routes = app
+            .MapGroup($"/{appRoot}")
+            .RegisterRoutes();
 
         var logFactory = app.Services.GetRequiredService<ILoggerFactory>();
         var log = logFactory.CreateLogger("Globot");

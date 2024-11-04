@@ -18,7 +18,7 @@
       "WebAppAssets" : {
         "Path": "/path/to/iisapp",
         "FileExtensions" : ["*.*"],
-		"ForceLowerCase": false
+		    "ForceLowerCase": false
       }
     }
   }
