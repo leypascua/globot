@@ -10,6 +10,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "conf", "conf", "{583396B7-1
 		..\conf\appsettings.Development.json.dist = ..\conf\appsettings.Development.json.dist
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Globot", "Globot\Globot.csproj", "{A5BC3EBE-C898-45AB-8BD5-467E3EA292AB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,6 +22,10 @@ Global
 		{2D9E6E18-3AE7-4592-A153-E2A879742CA0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2D9E6E18-3AE7-4592-A153-E2A879742CA0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2D9E6E18-3AE7-4592-A153-E2A879742CA0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A5BC3EBE-C898-45AB-8BD5-467E3EA292AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5BC3EBE-C898-45AB-8BD5-467E3EA292AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A5BC3EBE-C898-45AB-8BD5-467E3EA292AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A5BC3EBE-C898-45AB-8BD5-467E3EA292AB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
